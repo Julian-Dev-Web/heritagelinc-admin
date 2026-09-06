@@ -70,6 +70,7 @@ async function boot() {
   loadTeachers();
   loadPlaces();
   loadCatalogue();
+  loadAnnouncements();
 
   restoreNavState();
 }
@@ -389,21 +390,40 @@ el('announce-form').addEventListener('submit', async (e) => {
   if (body.length < 10) return say('error', 'Write a message of at least ten characters.');
 
   const btn = el('an-submit');
-  busy(btn, true, 'Post announcement');
+  const isEdit = editingAnnouncement != null;
+  const label = isEdit ? 'Save changes' : 'Post announcement';
 
-  const { data, error } = await db.rpc('broadcast_notification', {
-    p_type: 'announcement',
-    p_title: title,
-    p_body: body,
-  });
+  busy(btn, true, label);
 
-  busy(btn, false, 'Post announcement');
+  const { data, error } = isEdit
+      ? await db.rpc('admin_edit_announcement', {
+          p_batch_id: editingAnnouncement.batch_id,
+          p_title: title,
+          p_body: body,
+        })
+      : await db.rpc('broadcast_notification', {
+          p_type: 'announcement',
+          p_title: title,
+          p_body: body,
+        });
 
-  if (error) return say('error', 'Could not post that.', error.message);
+  busy(btn, false, label);
+
+  if (error) {
+    return say('error', isEdit ? 'Could not save that.' : 'Could not post that.',
+      error.message);
+  }
 
   el('an-title').value = '';
   el('an-body').value = '';
-  say('ok', `Posted to ${data} accounts.`);
+  el('an-submit').textContent = 'Post announcement';
+
+  say('ok', isEdit
+    ? `Corrected on ${data} notification${data === 1 ? '' : 's'}.`
+    : `Posted to ${data} account${data === 1 ? '' : 's'}.`);
+
+  editingAnnouncement = null;
+  loadAnnouncements();
 });
 
 // -------------------------------------------------------------- reload
@@ -413,6 +433,7 @@ function refreshAll() {
   loadTeachers();
   loadPlaces();
   loadCatalogue();
+  loadAnnouncements();
 }
 
 // ==================================================== SIDEBAR COLLAPSE
@@ -474,6 +495,10 @@ async function loadCatalogue() {
   box.querySelectorAll('[data-retire]').forEach((b) => {
     b.addEventListener('click', () => retireSite(b.dataset.retire, b));
   });
+
+  box.querySelectorAll('[data-restore]').forEach((b) => {
+    b.addEventListener('click', () => restoreSite(b.dataset.restore, b));
+  });
 }
 
 function siteRow(s) {
@@ -497,7 +522,7 @@ function siteRow(s) {
       <button class="btn btn-ghost btn-sm" data-edit="${esc(s.id)}">Edit</button>
       ${s.is_active
         ? `<button class="btn btn-reject btn-sm" data-retire="${esc(s.id)}">Hide</button>`
-        : `<span class="tag tag-grey">Hidden</span>`}
+        : `<button class="btn btn-ghost btn-sm" data-restore="${esc(s.id)}">Unhide</button>`}
     </div>
   </div>`;
 }
@@ -544,6 +569,13 @@ function openEditor(site) {
   el('ed-reference').value = site?.source_reference ?? '';
   el('ed-credit').value = site?.image_credit ?? '';
   el('ed-active').checked = site ? site.is_active : true;
+
+  el('ed-paste').value = (site?.latitude && site?.longitude)
+    ? `${site.latitude}, ${site.longitude}`
+    : '';
+
+  // Deleting is offered only for a row that already exists.
+  el('ed-delete').classList.toggle('hidden', site === null);
 
   showPreview(pendingImageUrl);
   el('ed-drop-text').textContent = pendingImageUrl
@@ -682,3 +714,215 @@ el('ed-save').addEventListener('click', async () => {
 });
 
 boot();
+
+// ============================================== COORDINATES FROM A LINK
+
+/// Accepts a raw pair, or a Google Maps URL of the forms
+///   .../maps/@14.8434,120.8125,17z
+///   .../maps/place/Name/@14.8434,120.8125,...
+///   ...?q=14.8434,120.8125
+///
+/// Shortened maps.app.goo.gl links cannot be resolved from a browser —
+/// the redirect is blocked by CORS — so the hint tells the user to copy
+/// the coordinates directly instead.
+function parseCoordinates(input) {
+  const text = (input || '').trim();
+  if (!text) return null;
+
+  const patterns = [
+    /@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,        // @lat,lng in a maps URL
+    /[?&]q=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,   // ?q=lat,lng
+    /[?&]ll=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,  // ?ll=lat,lng
+    /^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/,    // a pasted pair
+  ];
+
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (!m) continue;
+
+    const lat = parseFloat(m[1]);
+    const lon = parseFloat(m[2]);
+
+    if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+      return { lat, lon };
+    }
+  }
+
+  return null;
+}
+
+el('ed-paste').addEventListener('input', () => {
+  const coords = parseCoordinates(el('ed-paste').value);
+  if (!coords) return;
+
+  el('ed-lat').value = coords.lat.toFixed(7);
+  el('ed-lon').value = coords.lon.toFixed(7);
+});
+
+el('ed-paste').addEventListener('blur', () => {
+  const raw = el('ed-paste').value.trim();
+  if (!raw) return;
+
+  if (raw.includes('goo.gl') && !parseCoordinates(raw)) {
+    say(
+      'info',
+      'Shortened links cannot be read',
+      'Open the link in Google Maps, right-click the pin, and copy the ' +
+        'coordinate pair from the top of the menu.',
+    );
+  } else if (!parseCoordinates(raw)) {
+    say('info', 'No coordinates found in that text.',
+      'Paste a pair like 14.8434, 120.8125.');
+  }
+});
+
+// ================================================= DELETE / RESTORE SITE
+
+async function restoreSite(id, btn) {
+  busy(btn, true, 'Unhide');
+  const { error } = await db.rpc('admin_restore_site', { p_id: id });
+  busy(btn, false, 'Unhide');
+
+  if (error) return say('error', 'Could not unhide that site.', error.message);
+
+  say('ok', 'Visible in the app again.');
+  loadCatalogue();
+  loadOverview();
+}
+
+el('ed-delete').addEventListener('click', async () => {
+  if (!editing) return;
+
+  // Check what points at this row before offering to remove it.
+  const { data: usage } = await db.rpc('admin_site_usage', {
+    p_id: editing.id,
+  });
+
+  const u = Array.isArray(usage) ? usage[0] : usage;
+  const scans = u?.scan_count ?? 0;
+
+  if (scans > 0) {
+    return say(
+      'info',
+      `${editing.name} has ${scans} scan${scans === 1 ? '' : 's'} attached`,
+      'Deleting it would leave those learners with a capsule they can no ' +
+        'longer open. Hide it instead — it disappears from the app but the ' +
+        'scans stay readable.',
+    );
+  }
+
+  const sure = window.confirm(
+    `Delete ${editing.name} permanently?\n\n` +
+      'This cannot be undone. Hiding is reversible; deleting is not.',
+  );
+  if (!sure) return;
+
+  const btn = el('ed-delete');
+  busy(btn, true, 'Delete permanently');
+  const { error } = await db.rpc('admin_delete_site', { p_id: editing.id });
+  busy(btn, false, 'Delete permanently');
+
+  if (error) return say('error', 'Could not delete that site.', error.message);
+
+  edVeil.classList.remove('show');
+  say('ok', `${editing.name} was deleted.`);
+  editing = null;
+  loadCatalogue();
+  loadOverview();
+});
+
+// ======================================================= ANNOUNCEMENTS
+
+let announcements = [];
+let editingAnnouncement = null;
+
+async function loadAnnouncements() {
+  const box = el('q-announcements');
+  const { data, error } = await db.rpc('admin_announcements', {
+    max_results: 50,
+  });
+
+  if (error) {
+    box.innerHTML = `<p class="loading">${esc(error.message)}</p>`;
+    return;
+  }
+
+  announcements = data;
+
+  if (!data.length) {
+    box.innerHTML = `
+      <div class="empty">
+        <h3>Nothing sent yet</h3>
+        <p>Announcements you post appear here, with how many people opened them.</p>
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = data.map(announcementRow).join('');
+
+  box.querySelectorAll('[data-an-edit]').forEach((b) => {
+    b.addEventListener('click', () => openAnnouncementEditor(
+      announcements.find((a) => a.batch_id === b.dataset.anEdit)));
+  });
+
+  box.querySelectorAll('[data-an-delete]').forEach((b) => {
+    b.addEventListener('click', () =>
+      deleteAnnouncement(b.dataset.anDelete, b));
+  });
+}
+
+function announcementRow(a) {
+  const pct = a.recipients > 0
+    ? Math.round((a.read_count / a.recipients) * 100)
+    : 0;
+
+  return `
+  <div class="card" style="padding:16px 18px">
+    <div class="card-head" style="margin-bottom:10px">
+      <div style="flex:1">
+        <h3 style="font-size:17px">${esc(a.title)}</h3>
+        <p class="meta">${whenLabel(a.sent_at)} · ${a.read_count} of
+           ${a.recipients} opened (${pct}%)</p>
+      </div>
+    </div>
+    <p style="font-size:13.5px;line-height:1.55;margin-bottom:14px">${esc(a.body)}</p>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" data-an-edit="${esc(a.batch_id)}">Edit</button>
+      <button class="btn btn-reject btn-sm" data-an-delete="${esc(a.batch_id)}">Delete</button>
+    </div>
+  </div>`;
+}
+
+function openAnnouncementEditor(a) {
+  editingAnnouncement = a;
+  el('an-title').value = a.title;
+  el('an-body').value = a.body;
+  el('an-submit').textContent = 'Save changes';
+
+  el('an-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  say('info', 'Editing an announcement',
+    'Saving corrects the text on every phone it reached. ' +
+      'Clear the fields and reload the page to write a new one instead.');
+}
+
+async function deleteAnnouncement(batchId, btn) {
+  const a = announcements.find((x) => x.batch_id === batchId);
+
+  const sure = window.confirm(
+    `Delete "${a?.title ?? 'this announcement'}"?\n\n` +
+      `It disappears from ${a?.recipients ?? 'every'} notification list. ` +
+      'This cannot be undone.',
+  );
+  if (!sure) return;
+
+  busy(btn, true, 'Delete');
+  const { error } = await db.rpc('admin_delete_announcement', {
+    p_batch_id: batchId,
+  });
+  busy(btn, false, 'Delete');
+
+  if (error) return say('error', 'Could not delete that.', error.message);
+
+  say('ok', 'Announcement deleted.');
+  loadAnnouncements();
+}

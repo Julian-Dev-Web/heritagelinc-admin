@@ -126,6 +126,14 @@
         </div>
         <button type="submit" class="btn btn-primary" id="an-submit">Post announcement</button>
       </form>
+
+      <h2 style="font-family:var(--serif);font-size:21px;font-weight:500;
+                 margin:38px 0 6px">Sent announcements</h2>
+      <p class="page-sub" style="margin-bottom:18px">
+        Editing corrects the text on every phone it reached. Deleting
+        removes it from their notification list.
+      </p>
+      <div id="q-announcements"><p class="loading">Loading…</p></div>
     </section>
 
   </main>
@@ -173,6 +181,16 @@
       <input id="ed-name" type="text" maxlength="120">
     </div>
 
+    <div class="field">
+      <label for="ed-paste">Location</label>
+      <input id="ed-paste" type="text"
+             placeholder="Paste a Google Maps link or 14.8434, 120.8125">
+      <p class="hint">
+        In Google Maps, right-click the spot — the first item in the menu is
+        the coordinate pair. Click it to copy, then paste here.
+      </p>
+    </div>
+
     <div class="field field-row-3">
       <div>
         <label for="ed-category">Category</label>
@@ -197,7 +215,34 @@
 
     <div class="field">
       <label for="ed-municipality">Town or city</label>
-      <input id="ed-municipality" type="text" maxlength="80">
+      <input id="ed-municipality" type="text" maxlength="80"
+             list="bulacan-lgus" placeholder="Start typing, or pick from the list">
+      <datalist id="bulacan-lgus">
+        <option value="Angat"></option>
+        <option value="Balagtas"></option>
+        <option value="Baliuag"></option>
+        <option value="Bocaue"></option>
+        <option value="Bulakan"></option>
+        <option value="Bustos"></option>
+        <option value="Calumpit"></option>
+        <option value="Doña Remedios Trinidad"></option>
+        <option value="Guiguinto"></option>
+        <option value="Hagonoy"></option>
+        <option value="Malolos City"></option>
+        <option value="Marilao"></option>
+        <option value="Meycauayan City"></option>
+        <option value="Norzagaray"></option>
+        <option value="Obando"></option>
+        <option value="Pandi"></option>
+        <option value="Paombong"></option>
+        <option value="Plaridel"></option>
+        <option value="Pulilan"></option>
+        <option value="San Ildefonso"></option>
+        <option value="San Jose del Monte City"></option>
+        <option value="San Miguel"></option>
+        <option value="San Rafael"></option>
+        <option value="Santa Maria"></option>
+      </datalist>
     </div>
 
     <div class="field">
@@ -215,11 +260,32 @@
     <div class="field field-row">
       <div>
         <label for="ed-period">Period</label>
-        <input id="ed-period" type="text" maxlength="80" placeholder="e.g. Spanish colonial">
+        <input id="ed-period" type="text" maxlength="80" list="periods"
+               placeholder="e.g. Spanish colonial">
+        <datalist id="periods">
+          <option value="Pre-colonial"></option>
+          <option value="Spanish colonial"></option>
+          <option value="Philippine Revolution"></option>
+          <option value="First Philippine Republic"></option>
+          <option value="American colonial"></option>
+          <option value="Japanese occupation"></option>
+          <option value="Post-war"></option>
+          <option value="Contemporary"></option>
+        </datalist>
       </div>
       <div>
         <label for="ed-declaration">Declaration</label>
-        <input id="ed-declaration" type="text" maxlength="120" placeholder="e.g. National Historical Landmark">
+        <input id="ed-declaration" type="text" maxlength="120" list="declarations"
+               placeholder="e.g. National Historical Landmark">
+        <datalist id="declarations">
+          <option value="National Historical Landmark"></option>
+          <option value="National Cultural Treasure"></option>
+          <option value="Important Cultural Property"></option>
+          <option value="Heritage House"></option>
+          <option value="NHCP Historical Marker"></option>
+          <option value="Local Heritage Site"></option>
+          <option value="Not declared"></option>
+        </datalist>
       </div>
     </div>
 
@@ -239,7 +305,9 @@
       Visible in the app
     </label>
 
-    <div class="actions">
+    <div class="actions" style="justify-content:space-between">
+      <button class="btn btn-reject btn-sm hidden" id="ed-delete">Delete permanently</button>
+      <span style="flex:1"></span>
       <button class="btn btn-ghost btn-sm" id="ed-cancel">Cancel</button>
       <button class="btn btn-primary btn-sm" id="ed-save" style="width:auto">Save changes</button>
     </div>
