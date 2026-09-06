@@ -458,20 +458,33 @@ let catalogue = [];
 let editing = null;      // the row being edited, or null for a new one
 let pendingImageUrl = null;
 
-/// Categories offered in the editor. Seeded with the standard set, then
-/// widened with whatever is already in the table — an existing row using
-/// a value the console does not know about must still be editable.
-const BASE_CATEGORIES = [
-  'church', 'shrine', 'museum', 'monument', 'building', 'artwork',
-];
+/// Categories the table will actually accept, read from its own check
+/// constraint. Guessing this list is what produced the earlier
+/// "violates check constraint" failures.
+let allowedCategories = [];
+
+async function loadCategories() {
+  const { data, error } = await db.rpc('heritage_category_options');
+
+  if (error || !data?.length) {
+    // Fall back to whatever the existing rows use, so the editor still
+    // opens even if the lookup fails.
+    allowedCategories = [
+      ...new Set(catalogue.map((s) => s.category).filter(Boolean)),
+    ].sort();
+    return;
+  }
+
+  allowedCategories = data.map((r) => r.category);
+}
 
 function categoryOptions(current) {
-  const found = catalogue.map((s) => s.category).filter(Boolean);
-  const all = [...new Set([...BASE_CATEGORIES, ...found, current])]
+  const all = [...new Set([...allowedCategories, current])]
     .filter(Boolean)
     .sort();
 
-  const label = (c) => c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, ' ');
+  const label = (c) =>
+    c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, ' ');
 
   return all
     .map((c) => `<option value="${esc(c)}"${c === current ? ' selected' : ''}>`
@@ -494,6 +507,7 @@ async function loadCatalogue() {
   }
 
   catalogue = data;
+  if (allowedCategories.length === 0) await loadCategories();
 
   if (!data.length) {
     box.innerHTML = `
@@ -582,8 +596,12 @@ function openEditor(site) {
   // Rebuild the options first; assigning a value that is not present
   // leaves the select with nothing chosen, which is what produced the
   // empty category the database rejected.
-  el('ed-category').innerHTML = categoryOptions(site?.category ?? 'church');
-  el('ed-category').value = site?.category ?? 'church';
+  {
+    const fallback = allowedCategories[0] ?? 'church';
+    const chosen = site?.category ?? fallback;
+    el('ed-category').innerHTML = categoryOptions(chosen);
+    el('ed-category').value = chosen;
+  }
   el('ed-municipality').value = site?.municipality ?? '';
   el('ed-lat').value = site?.latitude ?? '';
   el('ed-lon').value = site?.longitude ?? '';
