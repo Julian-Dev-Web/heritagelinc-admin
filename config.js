@@ -1,0 +1,4 @@
+window.HERITAGELINC = {
+  SUPABASE_URL: 'https://nsrtfrmrlslqdzmbtfni.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zcnRmcm1ybHNscWR6bWJ0Zm5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwOTM0ODIsImV4cCI6MjEwMDY2OTQ4Mn0.B5X3qrE9ldWFL6-eqRbdfRbAROsNWrOi9Lz3N6efiw0',
+};  

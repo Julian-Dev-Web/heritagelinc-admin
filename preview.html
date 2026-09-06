@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Console · HeritageLinc Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="shell" id="shell">
+
+  <nav class="sidebar">
+    <button class="hamburger" id="toggle-nav" aria-label="Collapse menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+
+    <p class="wordmark">HeritageLinc</p>
+
+    <ul class="nav">
+      <li><button data-tab="overview" aria-current="true" title="Overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        <span class="label">Overview</span>
+      </button></li>
+
+      <li><button data-tab="teachers" title="Teachers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+        <span class="label">Teachers</span>
+        <span class="count" id="n-teachers" data-n="0"></span>
+      </button></li>
+
+      <li><button data-tab="places" title="Submitted places">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10a7 7 0 1114 0c0 5.6-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+        <span class="label">Submissions</span>
+        <span class="count" id="n-places" data-n="0"></span>
+      </button></li>
+
+      <li><button data-tab="catalogue" title="Catalogue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <span class="label">Catalogue</span>
+      </button></li>
+
+      <li><button data-tab="announce" title="Announce">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 001 1h2l4 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18.5 5.5a9 9 0 010 13"/></svg>
+        <span class="label">Announce</span>
+      </button></li>
+    </ul>
+
+    <div class="who">
+      <p class="name" id="me-name">—</p>
+      <p class="mail" id="me-mail">—</p>
+      <button id="signout" title="Sign out">Sign out</button>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+
+    <!-- OVERVIEW -->
+    <section id="tab-overview">
+      <h1 class="page-title">Overview</h1>
+      <p class="page-sub">What is waiting for you today.</p>
+      <div class="stats" id="stats"><p class="loading">Loading…</p></div>
+    </section>
+
+    <!-- TEACHERS -->
+    <section id="tab-teachers" class="hidden">
+      <h1 class="page-title">Teaching credentials</h1>
+      <p class="page-sub">
+        Accounts registered with an official DepEd address are verified
+        automatically when the address is confirmed. Everyone below needs a
+        person to look at their evidence before they can gather a class off
+        campus.
+      </p>
+      <div class="queue" id="q-teachers"><p class="loading">Loading…</p></div>
+    </section>
+
+    <!-- SUBMISSIONS -->
+    <section id="tab-places" class="hidden">
+      <h1 class="page-title">Submitted places</h1>
+      <p class="page-sub">
+        Approving publishes the place to Explore and tells everyone about it.
+        It is marked as a community submission, not a verified record, until
+        someone checks it against an NHCP marker on site.
+      </p>
+      <div class="queue" id="q-places"><p class="loading">Loading…</p></div>
+    </section>
+
+    <!-- CATALOGUE -->
+    <section id="tab-catalogue" class="hidden">
+      <h1 class="page-title">Catalogue</h1>
+      <p class="page-sub">
+        Every published site, as students see it. Edits appear on their
+        phones the next time they open Explore.
+      </p>
+
+      <div class="toolbar">
+        <input type="search" id="cat-search" placeholder="Search by name or town">
+        <button class="btn btn-primary btn-sm" id="cat-new" style="width:auto">Add a site</button>
+      </div>
+
+      <div id="q-catalogue"><p class="loading">Loading…</p></div>
+    </section>
+
+    <!-- ANNOUNCE -->
+    <section id="tab-announce" class="hidden">
+      <h1 class="page-title">Announcement</h1>
+      <p class="page-sub">
+        Goes to every account as a notification. There is no way to unsend
+        it, so read it once more before you post.
+      </p>
+
+      <form id="announce-form" style="max-width:520px">
+        <div class="field">
+          <label for="an-title">Title</label>
+          <input id="an-title" type="text" maxlength="120" required>
+        </div>
+        <div class="field">
+          <label for="an-body">Message</label>
+          <textarea id="an-body" maxlength="500" required></textarea>
+          <p class="hint">Up to 500 characters.</p>
+        </div>
+        <button type="submit" class="btn btn-primary" id="an-submit">Post announcement</button>
+      </form>
+    </section>
+
+  </main>
+</div>
+
+<!-- Decline dialog -->
+<div class="veil" id="veil">
+  <div class="dialog">
+    <h2 id="dlg-title">Decline</h2>
+    <p id="dlg-sub">The person will see this reason, so make it useful.</p>
+    <div class="field">
+      <label for="dlg-reason">Reason</label>
+      <textarea id="dlg-reason" maxlength="400" placeholder="e.g. The faculty ID photo is too blurry to read the school name."></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" id="dlg-cancel">Cancel</button>
+      <button class="btn btn-reject btn-sm" id="dlg-confirm">Send decision</button>
+    </div>
+  </div>
+</div>
+
+<!-- Site editor -->
+<div class="veil wide" id="ed-veil">
+  <div class="dialog">
+    <h2 id="ed-title">Edit site</h2>
+    <p>Students read this text inside the app. Write it for a secondary
+       school reader.</p>
+
+    <div class="field">
+      <label>Photo</label>
+      <img id="ed-preview" class="preview-img hidden" alt="">
+      <div class="dropzone" id="ed-drop">
+        <p id="ed-drop-text">Choose a photo, or drop one here. JPG or PNG, under 3 MB.</p>
+      </div>
+      <input type="file" id="ed-file" accept="image/jpeg,image/png,image/webp" class="hidden">
+    </div>
+
+    <div class="field">
+      <label for="ed-credit">Photo credit</label>
+      <input id="ed-credit" type="text" maxlength="160" placeholder="e.g. Photo by the Malolos tourism office">
+    </div>
+
+    <div class="field">
+      <label for="ed-name">Name</label>
+      <input id="ed-name" type="text" maxlength="120">
+    </div>
+
+    <div class="field field-row-3">
+      <div>
+        <label for="ed-category">Category</label>
+        <select id="ed-category">
+          <option value="church">Church</option>
+          <option value="shrine">Shrine</option>
+          <option value="museum">Museum</option>
+          <option value="monument">Monument</option>
+          <option value="building">Building</option>
+          <option value="artwork">Artwork</option>
+        </select>
+      </div>
+      <div>
+        <label for="ed-lat">Latitude</label>
+        <input id="ed-lat" type="number" step="0.0000001" placeholder="14.8434">
+      </div>
+      <div>
+        <label for="ed-lon">Longitude</label>
+        <input id="ed-lon" type="number" step="0.0000001" placeholder="120.8125">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="ed-municipality">Town or city</label>
+      <input id="ed-municipality" type="text" maxlength="80">
+    </div>
+
+    <div class="field">
+      <label for="ed-summary">Description</label>
+      <textarea id="ed-summary" maxlength="600"></textarea>
+      <p class="hint">One or two sentences. This is what appears on the card.</p>
+    </div>
+
+    <div class="field">
+      <label for="ed-note">Historical note</label>
+      <textarea id="ed-note" maxlength="1200"></textarea>
+      <p class="hint">Longer background, shown when the site is opened.</p>
+    </div>
+
+    <div class="field field-row">
+      <div>
+        <label for="ed-period">Period</label>
+        <input id="ed-period" type="text" maxlength="80" placeholder="e.g. Spanish colonial">
+      </div>
+      <div>
+        <label for="ed-declaration">Declaration</label>
+        <input id="ed-declaration" type="text" maxlength="120" placeholder="e.g. National Historical Landmark">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="ed-source">Source</label>
+      <input id="ed-source" type="text" maxlength="160" placeholder="e.g. NHCP historical marker">
+      <p class="hint">Shown to every reader as the provenance of this entry.</p>
+    </div>
+
+    <div class="field">
+      <label for="ed-reference">Source reference</label>
+      <input id="ed-reference" type="text" maxlength="240" placeholder="Marker text, catalogue number, or a link">
+    </div>
+
+    <label class="checkline">
+      <input type="checkbox" id="ed-active" checked>
+      Visible in the app
+    </label>
+
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" id="ed-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="ed-save" style="width:auto">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>
